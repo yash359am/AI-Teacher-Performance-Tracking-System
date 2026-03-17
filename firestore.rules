@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required, email format)
+    //   - displayName: string
+    //   - role: string (required, 'teacher' or 'principal')
+    //   - createdAt: timestamp
+    //
+    // Collection: sessions
+    // Fields:
+    //   - teacherId: string (required)
+    //   - teacherName: string
+    //   - startTime: timestamp (required)
+    //   - endTime: timestamp
+    //   - status: string (required, 'recording' or 'completed')
+    //   - metrics: map
+    //   - transcript: string
+    //   - summary: string
+    //
+    // Collection: sessions/{sessionId}/alerts
+    // Fields:
+    //   - sessionId: string (required)
+    //   - teacherId: string (required)
+    //   - timestamp: timestamp (required)
+    //   - type: string (required)
+    //   - message: string (required)
+    //   - suggestion: string
+    // ===============================================================
+
+    // Helper Functions
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'role', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 128 &&
+             data.email is string && isValidEmail(data.email) && data.email.size() < 256 &&
+             data.role in ['teacher', 'principal'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100));
+    }
+
+    function isValidSession(data) {
+      return hasOnlyAllowedFields(['teacherId', 'teacherName', 'startTime', 'endTime', 'status', 'metrics', 'transcript', 'summary', 'subject']) &&
+             data.teacherId is string && data.teacherId.size() > 0 &&
+             data.status in ['recording', 'completed'] &&
+             (!('teacherName' in data) || (data.teacherName is string && data.teacherName.size() < 100)) &&
+             (!('transcript' in data) || (data.transcript is string && data.transcript.size() < 100000)) &&
+             (!('summary' in data) || (data.summary is string && data.summary.size() < 10000)) &&
+             (!('subject' in data) || (data.subject is string && data.subject.size() < 100));
+    }
+
+    function isValidAlert(data) {
+      return hasOnlyAllowedFields(['sessionId', 'teacherId', 'timestamp', 'type', 'message', 'suggestion', 'pedagogicalFeedback']) &&
+             data.sessionId is string && data.sessionId.size() > 0 &&
+             data.teacherId is string && data.teacherId.size() > 0 &&
+             data.type in ['mistake', 'speed', 'clarity', 'engagement', 'insight'] &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 2000 &&
+             (!('suggestion' in data) || (data.suggestion is string && data.suggestion.size() < 2000)) &&
+             (!('pedagogicalFeedback' in data) || (data.pedagogicalFeedback is string && data.pedagogicalFeedback.size() < 2000));
+    }
+
+    // Rules - Authentication removed as per user request
+    match /users/{uid} {
+      allow read: if true;
+      allow create, update: if isValidUser(request.resource.data);
+    }
+
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow create: if isValidSession(request.resource.data);
+      allow update: if isValidSession(request.resource.data);
+      
+      match /alerts/{alertId} {
+        allow read: if true;
+        allow create: if isValidAlert(request.resource.data);
+      }
+    }
+  }
+}

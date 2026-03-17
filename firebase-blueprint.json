@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for teachers and principals",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["teacher", "principal"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "A teaching session recording and analysis",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "teacherName": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["recording", "completed"] },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "clarityScore": { "type": "number" },
+            "speed": { "type": "number" },
+            "engagement": { "type": "number" },
+            "mistakeCount": { "type": "number" }
+          }
+        },
+        "transcript": { "type": "string" },
+        "summary": { "type": "string" }
+      },
+      "required": ["teacherId", "startTime", "status"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "Real-time alerts generated during a session",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "teacherId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["mistake", "speed", "clarity", "engagement"] },
+        "message": { "type": "string" },
+        "suggestion": { "type": "string" }
+      },
+      "required": ["sessionId", "teacherId", "timestamp", "type", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Teaching sessions"
+    },
+    "/sessions/{sessionId}/alerts/{alertId}": {
+      "schema": "Alert",
+      "description": "Alerts for a specific session"
+    }
+  }
+}

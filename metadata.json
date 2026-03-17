@@ -1,0 +1,8 @@
+{
+  "name": "Copy of EduVision AI - Smart Teacher Analysis",
+  "description": "A real-time AI system that analyzes teaching quality, detects mistakes, and provides instant feedback to educators.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
